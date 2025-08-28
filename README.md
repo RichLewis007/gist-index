@@ -2,6 +2,8 @@
 
 This repo hosts a tiny script + workflow that builds an index of **public** gists for a username and overwrites a designated “index” gist with a Markdown table.
 
+See the resulting Gist here: https://gist.github.com/RichLewis007/a48c0ac6b651a36724ce6314d5242c74
+
 ## Setup
 
 1. Create (or choose) the gist that will serve as your index.
