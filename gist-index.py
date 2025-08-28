@@ -29,6 +29,7 @@ RETRIES = 3   # light retry on transient 5xx / secondary rate limits
 RETRY_BACKOFF = 2.0  # seconds (exponential)
 
 USER_AGENT = "gist-index-script/1.0 (+https://github.com/)"
+TARGET_MD = "Public-Gists-by-Rich-Lewis.md"
 
 @dataclass
 class Cfg:
@@ -118,7 +119,7 @@ def primary_language(files: Dict[str, Dict[str, Any]]) -> str:
 def build_markdown(gists: List[Dict[str, Any]]) -> str:
     now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines = [
-        "# Gist Index (Public)",
+        "# Public Gists by Rich Lewis",
         "",
         f"_Auto-generated daily at {now}_",
         "",
@@ -148,7 +149,7 @@ def update_index_gist(s: Session, gist_id: str, content_md: str) -> str:
         sys.exit(3)
     payload = {
         "description": "Auto-generated index of my PUBLIC gists",
-        "files": {"Public-Gists-by-Rich-Lewis.md": {"content": content_md}},
+        "files": {TARGET_MD: {"content": content_md}},
     }
     r = _req_with_retry(s, "PATCH", f"{API}/gists/{gist_id}", json=payload)
     if r.status_code == 404:
