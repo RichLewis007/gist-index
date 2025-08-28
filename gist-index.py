@@ -148,7 +148,7 @@ def update_index_gist(s: Session, gist_id: str, content_md: str) -> str:
         sys.exit(3)
     payload = {
         "description": "Auto-generated index of my PUBLIC gists",
-        "files": {"README.md": {"content": content_md}},
+        "files": {"Public-Gists-by-Rich-Lewis.md": {"content": content_md}},
     }
     r = _req_with_retry(s, "PATCH", f"{API}/gists/{gist_id}", json=payload)
     if r.status_code == 404:
