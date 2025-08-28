@@ -33,15 +33,15 @@ jobs:
           GITHUB_USERNAME: "RichLewis007"
           GITHUB_TOKEN: ${{ secrets.GIST_TOKEN }}
           INDEX_GIST_ID: ${{ secrets.INDEX_GIST_ID }}
-          TARGET_MD_FILENAME: "Public-Gists-by-Rich-Lewis.md"
+          TARGET_MD_FILENAME: "Public-Gists-from-Rich-Lewis.md"
         run: |
-          uv run --with requests python gist-index.py > /tmp/Public-Gists-by-Rich-Lewis.md
+          uv run --with requests python gist-index.py > /tmp/Public-Gists-from-Rich-Lewis.md
 
       # 2) Check out the OTHER repo where you want the Markdown committed
-      - name: Checkout target repo (public-gists-from-Rich-Lewis)
+      - name: Checkout target repo (Public-Gists-from-Rich-Lewis)
         uses: actions/checkout@v4
         with:
-          repository: RichLewis007/public-gists-from-Rich-Lewis
+          repository: RichLewis007/Public-Gists-from-Rich-Lewis
           path: target-repo
           token: ${{ secrets.PUSH_TOKEN }}
 
@@ -49,13 +49,13 @@ jobs:
       - name: Commit updated Markdown into target repo
         working-directory: target-repo
         run: |
-          cp /tmp/Public-Gists-by-Rich-Lewis.md ./Public-Gists-by-Rich-Lewis.md
+          cp /tmp/Public-Gists-from-Rich-Lewis.md ./Public-Gists-from-Rich-Lewis.md
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          if ! git diff --quiet -- Public-Gists-by-Rich-Lewis.md; then
-            git add Public-Gists-by-Rich-Lewis.md
+          if ! git diff --quiet -- Public-Gists-from-Rich-Lewis.md; then
+            git add Public-Gists-from-Rich-Lewis.md
             git commit -m "chore: update public gist index [skip ci]"
             git push
           else
