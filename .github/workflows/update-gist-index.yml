@@ -1,0 +1,63 @@
+name: Update Public Gist Index
+
+on:
+  schedule:
+    - cron: "0 13 * * *"  # Daily 13:00 UTC (≈ 9:00 AM ET)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write   # needed to commit to the target repo after checkout
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (this repo)
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv (with cache)
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # 1) Run the script to STDOUT and also update the gist (env controls gist update)
+      - name: Generate Markdown and update gist
+        id: gen
+        env:
+          GITHUB_USERNAME: "RichLewis007"
+          GITHUB_TOKEN: ${{ secrets.GIST_TOKEN }}
+          INDEX_GIST_ID: ${{ secrets.INDEX_GIST_ID }}
+          TARGET_MD_FILENAME: "Public-Gists-by-Rich-Lewis.md"
+        run: |
+          uv run --with requests python gist-index.py > /tmp/Public-Gists-by-Rich-Lewis.md
+
+      # 2) Check out the OTHER repo where you want the Markdown committed
+      - name: Checkout target repo (public-gists-from-Rich-Lewis)
+        uses: actions/checkout@v4
+        with:
+          repository: RichLewis007/public-gists-from-Rich-Lewis
+          path: target-repo
+          token: ${{ secrets.PUSH_TOKEN }}
+
+      # 3) Copy the generated file into the target repo, commit, and push if it changed
+      - name: Commit updated Markdown into target repo
+        working-directory: target-repo
+        run: |
+          cp /tmp/Public-Gists-by-Rich-Lewis.md ./Public-Gists-by-Rich-Lewis.md
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if ! git diff --quiet -- Public-Gists-by-Rich-Lewis.md; then
+            git add Public-Gists-by-Rich-Lewis.md
+            git commit -m "chore: update public gist index [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
