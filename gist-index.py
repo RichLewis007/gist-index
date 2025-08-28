@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
-Generate a public-only index of gists for a given GitHub username
-and update a target gist with a Markdown table.
+Generate a public-only index of my gists,
+and update a target gist with a Markdown table of those public gists.
+
+Uses a GitHub Action which runs this script on a schedule or manually.
 
 Env:
   GITHUB_USERNAME   (required) GitHub handle to list PUBLIC gists from
   INDEX_GIST_ID     (required) The gist ID to overwrite (the index gist)
-  GITHUB_TOKEN      (required for updating the gist; optional for listing)
+  GITHUB_TOKEN      (has "gist" scope, required for updating the gist; optional for listing)
 
-  To run: uv run python gist-index.py
+  To run: 
+  export GITHUB_USERNAME="RichLewis007"
+  export INDEX_GIST_ID="MY_GIST_ID"
+  export GITHUB_TOKEN="MY_GIST_EDITING_TOKEN"
+
+  uv run --with requests python gist-index.py
 """
 
 from __future__ import annotations
