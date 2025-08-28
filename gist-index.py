@@ -170,16 +170,138 @@ def build_markdown(gists: list[dict]) -> str:
     now_et = datetime.now(ZoneInfo("America/New_York"))
     timestamp = now_et.strftime("%Y-%m-%d %I:%M %p %Z")
 
+   # ---- styles (inline) ----
+    style = """
+<style>
+:root { --line:#e5e7eb; --bg:#ffffff; --bg-alt:#fafafa; --text:#0f172a; --muted:#64748b; --hint:#94a3b8; }
+.controls { display:flex; gap:.5rem; align-items:center; margin:.5rem 0 1rem; flex-wrap: wrap; }
+.controls input[type="search"]{ padding:.45rem .6rem; width:260px; border:1px solid var(--line); border-radius:.5rem; }
+.badge { display:inline-block; padding:.15rem .45rem; border-radius:.5rem; background:#e8efff; color:#1d4ed8; font-size:.75rem; line-height:1; }
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:.95rem; background:var(--bg); }
+thead th { position:sticky; top:0; background:var(--bg); text-align:left; border-bottom:1px solid var(--line); padding:.55rem .6rem; }
+tbody td { border-top:1px solid var(--line); padding:.5rem .6rem; vertical-align:top; }
+tbody tr:nth-child(even){ background:var(--bg-alt); }
+th.sortable { cursor:pointer; }
+th.sortable::after { content:" \\2195"; color:var(--hint); font-weight:normal; }
+small.muted{ color:var(--muted); }
+</style>
+""".strip()
+
     lines = [
         "# Public Gists by Rich Lewis",
         "",
+        style,
         f"_Auto-generated at {timestamp}_",
         "",
         "**Last updated:** " + timestamp,
         "",
+        '<div class="controls">',
+        '  <input id="filter" type="search" placeholder="Filter by title or language…">',
+        '  <span class="badge" id="count"></span>',
+        '</div>',
+        '<div class="table-wrap">',
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",
     ]
+
+    # newest first
+    gists_sorted = sorted(gists, key=lambda x: x.get("updated_at") or "", reverse=True)
+    for g in gists_sorted:
+        desc = (g.get("description") or "").strip() or "(no description)"
+        title = desc.splitlines()[0][:120]
+        files = g.get("files") or {}
+        file_count = len(files)
+        lang = primary_language(files)
+        # Convert UTC -> Eastern for display
+        try:
+            raw = g.get("updated_at")
+            dt_utc = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            dt_et = dt_utc.astimezone(ZoneInfo("America/New_York"))
+            updated = dt_et.strftime("%Y-%m-%d %I:%M %p %Z")
+        except Exception:
+            updated = g.get("updated_at") or ""
+        url = g.get("html_url") or ""
+
+        # Wrap language as a badge
+        lang_cell = f'<span class="badge">{lang}</span>' if lang else ""
+
+        lines.append(f"| {title} | {file_count} | {lang_cell} | ✅ | {updated} | [open]({url}) |")
+
+    lines += [
+        "</div>",
+        "",
+        (
+            f"_Generated automatically by "
+            f"[gist-index workflow](https://github.com/RichLewis007/gist-index). "
+            f"{SCHEDULE_DESC}._"
+        ),
+        "",
+        # ---- behavior (filter + sort) ----
+        """<script>
+(function(){
+  const q=document.getElementById('filter');
+  const table=document.querySelector('table'); if(!table) return;
+  const tbody=table.tBodies[0]; const rows=[...tbody.rows];
+  const ths=table.tHead? table.tHead.rows[0].cells : [];
+  const count=document.getElementById('count');
+  // mark sortable columns: Title(0), Files(1), Lang(2), Updated(4)
+  [0,1,2,4].forEach(i=>ths[i] && ths[i].classList.add('sortable'));
+
+  function applyFilter(){
+    const term=(q?.value||"").toLowerCase();
+    let visible=0;
+    rows.forEach(tr=>{
+      const text=tr.textContent.toLowerCase();
+      const show=!term || text.includes(term);
+      tr.style.display=show?"":"none";
+      if(show) visible++;
+    });
+    if(count){ count.textContent = visible + " gists"; }
+  }
+  q && q.addEventListener('input', applyFilter);
+  applyFilter();
+
+  function cellVal(tr,i){
+    const t=(tr.cells[i]?.textContent||"").trim();
+    return t;
+  }
+
+  function sortBy(idx){
+    let asc = !ths[idx].dataset.desc;
+    rows.sort((a,b)=>{
+      const A=cellVal(a,idx), B=cellVal(b,idx);
+      // try date
+      if(!isNaN(Date.parse(A)) && !isNaN(Date.parse(B))){
+        return asc ? (new Date(A)-new Date(B)) : (new Date(B)-new Date(A));
+      }
+      // try number
+      const nA=parseFloat(A), nB=parseFloat(B);
+      if(!isNaN(nA) && !isNaN(nB)){ return asc ? (nA-nB) : (nB-nA); }
+      // fallback string
+      return asc ? A.localeCompare(B) : B.localeCompare(A);
+    });
+    rows.forEach(r=>tbody.appendChild(r));
+    // toggle state
+    ths[idx].dataset.desc = asc ? "" : "1";
+  }
+
+  [0,1,2,4].forEach(i=>{
+    if(!ths[i]) return;
+    ths[i].addEventListener('click', ()=>sortBy(i));
+  });
+
+  // Re-apply filter after sort to keep count correct
+  table.addEventListener('click', e=>{
+    if(e.target.closest('th')) setTimeout(applyFilter, 0);
+  });
+
+  // Support Material's client-side swaps if this ever sits behind it
+  if(window.document$){ window.document$.subscribe(applyFilter); }
+})();
+</script>"""
+    ]
+    return "\n".join(lines)
 
     gists_sorted = sorted(gists, key=lambda x: x.get("updated_at") or "", reverse=True)
     for g in gists_sorted:
