@@ -3,6 +3,14 @@
 Generate a public-only index of my gists,
 and update a target gist with a Markdown table of those public gists.
 
+Reminder
+
+The workflow cron is 0 13 * * * (13:00 UTC), which is 9:00 AM ET during Daylight Time. If you ever change the schedule, update SCHEDULE_DESC to match.
+
+## Behavior
+- Always prints the Markdown to stdout.
+- If INDEX_GIST_ID and GITHUB_TOKEN are set, also PATCHes that gist file.
+
 Uses a GitHub Action which runs this script on a schedule or manually.
 
 ## Requirements
@@ -60,38 +68,40 @@ import os
 import sys
 import time
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from typing import Any, Dict, List, Optional, Tuple
 
 import requests
 from requests import Response, Session
 
 API = "https://api.github.com"
-TIMEOUT = 30  # seconds per request
-RETRIES = 3   # light retry on transient 5xx / secondary rate limits
-RETRY_BACKOFF = 2.0  # seconds (exponential)
-
-USER_AGENT = "gist-index-script/1.0 (+https://github.com/)"
-TARGET_MD = "Public-Gists-by-Rich-Lewis.md"
+TIMEOUT = 30
+RETRIES = 3
+RETRY_BACKOFF = 2.0
+USER_AGENT = "gist-index-script/1.1 (+https://github.com/)"
+SCHEDULE_DESC = "Updated daily at 9:00 AM Eastern"  # keep this in sync with your cron
 
 @dataclass
 class Cfg:
     username: str
-    index_gist_id: str
+    index_gist_id: Optional[str]
     token: Optional[str]
+    target_md: str
 
 def getenv_required(name: str) -> str:
-    val = os.getenv(name)
-    if not val:
+    v = os.getenv(name)
+    if not v:
         print(f"Missing required env: {name}", file=sys.stderr)
         sys.exit(1)
-    return val
+    return v
 
 def load_cfg() -> Cfg:
     return Cfg(
         username=getenv_required("GITHUB_USERNAME"),
-        index_gist_id=getenv_required("INDEX_GIST_ID"),
+        index_gist_id=os.getenv("INDEX_GIST_ID"),
         token=os.getenv("GITHUB_TOKEN"),
+        target_md=os.getenv("TARGET_MD_FILENAME", "Public-Gists-by-Rich-Lewis.md"),
     )
 
 def make_session(token: Optional[str]) -> Session:
@@ -106,11 +116,10 @@ def make_session(token: Optional[str]) -> Session:
     return s
 
 def _req_with_retry(s: Session, method: str, url: str, **kw: Any) -> Response:
-    last_err: Optional[Exception] = None
+    last: Optional[Exception] = None
     for attempt in range(1, RETRIES + 1):
         try:
             r = s.request(method, url, timeout=TIMEOUT, **kw)
-            # Handle primary and secondary rate limits gracefully
             if r.status_code == 403 and "rate limit" in (r.text or "").lower():
                 reset = r.headers.get("X-RateLimit-Reset")
                 if reset and reset.isdigit():
@@ -118,22 +127,20 @@ def _req_with_retry(s: Session, method: str, url: str, **kw: Any) -> Response:
                     print(f"Rate limited. Sleeping {wait}s…", file=sys.stderr)
                     time.sleep(wait)
                     continue
-            # Retry on transient 5xx
             if 500 <= r.status_code < 600:
                 raise requests.HTTPError(f"{r.status_code} {r.reason}", response=r)
             return r
         except (requests.ConnectionError, requests.Timeout, requests.HTTPError) as e:
-            last_err = e
+            last = e
             if attempt == RETRIES:
                 break
-            sleep = RETRY_BACKOFF ** (attempt - 1)
-            print(f"Transient error ({e}); retry {attempt}/{RETRIES-1} in {sleep:.1f}s…", file=sys.stderr)
-            time.sleep(sleep)
-    assert last_err is not None
-    raise last_err
+            backoff = RETRY_BACKOFF ** (attempt - 1)
+            print(f"Transient error ({e}); retry {attempt}/{RETRIES-1} in {backoff:.1f}s…", file=sys.stderr)
+            time.sleep(backoff)
+    assert last is not None
+    raise last
 
 def list_public_gists(s: Session, username: str) -> List[Dict[str, Any]]:
-    """List ALL public gists for a username (paginated)."""
     gists: List[Dict[str, Any]] = []
     page = 1
     while True:
@@ -150,7 +157,6 @@ def list_public_gists(s: Session, username: str) -> List[Dict[str, Any]]:
     return gists
 
 def primary_language(files: Dict[str, Dict[str, Any]]) -> str:
-    """Pick language of largest file, if any."""
     best: Optional[Tuple[str, int]] = None
     for f in files.values():
         lang = f.get("language")
@@ -159,17 +165,22 @@ def primary_language(files: Dict[str, Dict[str, Any]]) -> str:
             best = (lang, size)
     return best[0] if best else ""
 
-def build_markdown(gists: List[Dict[str, Any]]) -> str:
-    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+def build_markdown(gists: list[dict]) -> str:
+    # Eastern time for display (handles EST/EDT automatically)
+    now_et = datetime.now(ZoneInfo("America/New_York"))
+    timestamp = now_et.strftime("%Y-%m-%d %I:%M %p %Z")
+
     lines = [
         "# Public Gists by Rich Lewis",
         "",
-        f"_Auto-generated daily at {now}_",
+        f"_Auto-generated at {timestamp}_",
+        "",
+        "**Last updated:** " + timestamp,
         "",
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",
     ]
-    # newest updated first
+
     gists_sorted = sorted(gists, key=lambda x: x.get("updated_at") or "", reverse=True)
     for g in gists_sorted:
         desc = (g.get("description") or "").strip() or "(no description)"
@@ -177,22 +188,31 @@ def build_markdown(gists: List[Dict[str, Any]]) -> str:
         files = g.get("files") or {}
         file_count = len(files)
         lang = primary_language(files)
-        public = "✅"  # listing public-only by design
-        updated_raw = (g.get("updated_at") or "")
-        # keep the original UTC indicator from GitHub but make it human-friendly
-        updated = updated_raw.replace("T", " ").replace("Z", " UTC")
+
+        # Convert GitHub's UTC timestamp to Eastern
+        try:
+            raw = g.get("updated_at")
+            dt_utc = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+            dt_et = dt_utc.astimezone(ZoneInfo("America/New_York"))
+            updated = dt_et.strftime("%Y-%m-%d %I:%M %p %Z")
+        except Exception:
+            updated = g.get("updated_at") or ""
+
         url = g.get("html_url") or ""
-        lines.append(f"| {title} | {file_count} | {lang} | {public} | {updated} | [open]({url}) |")
+        lines.append(f"| {title} | {file_count} | {lang} | ✅ | {updated} | [open]({url}) |")
+
     lines.append("")
+    lines.append(
+        f"_Generated automatically by "
+        f"[gist-index workflow](https://github.com/RichLewis007/gist-index). "
+        f"{SCHEDULE_DESC}._"
+    )
     return "\n".join(lines)
 
-def update_index_gist(s: Session, gist_id: str, content_md: str) -> str:
-    if "Authorization" not in s.headers:
-        print("GITHUB_TOKEN is required to update the gist.", file=sys.stderr)
-        sys.exit(3)
+def update_index_gist(s: Session, gist_id: str, target_md: str, content_md: str) -> str:
     payload = {
         "description": "Auto-generated index of my PUBLIC gists",
-        "files": {TARGET_MD: {"content": content_md}},
+        "files": { target_md: {"content": content_md} },
     }
     r = _req_with_retry(s, "PATCH", f"{API}/gists/{gist_id}", json=payload)
     if r.status_code == 404:
@@ -201,21 +221,29 @@ def update_index_gist(s: Session, gist_id: str, content_md: str) -> str:
     r.raise_for_status()
     return r.json().get("html_url", "(unknown)")
 
-def main() -> None:
+def main() -> int:
     cfg = load_cfg()
     s = make_session(cfg.token)
     gists = list_public_gists(s, cfg.username)
     md = build_markdown(gists)
-    url = update_index_gist(s, cfg.index_gist_id, md)
-    print(f"Updated gist: {url}")
+
+    # Always print Markdown to stdout
+    print(md)
+
+    # Optionally update gist if both envs are present
+    if cfg.index_gist_id and cfg.token:
+        try:
+            url = update_index_gist(s, cfg.index_gist_id, cfg.target_md, md)
+            print(f"\n[info] Updated gist: {url}", file=sys.stderr)
+        except requests.HTTPError as e:
+            status = getattr(e, "response", None).status_code if getattr(e, "response", None) else "HTTP"
+            print(f"[warn] Gist update failed ({status}): {e}", file=sys.stderr)
+            return 5
+    return 0
 
 if __name__ == "__main__":
     try:
-        main()
-    except requests.HTTPError as e:
-        status = getattr(e, "response", None).status_code if getattr(e, "response", None) else "HTTP"
-        print(f"HTTP error ({status}): {e}", file=sys.stderr)
-        sys.exit(5)
+        sys.exit(main())
     except Exception as e:
         print(f"Unhandled error: {e!r}", file=sys.stderr)
         sys.exit(6)

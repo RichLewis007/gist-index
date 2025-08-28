@@ -1,8 +1,11 @@
-# Gist Index (Public)
+# Gist Index Automation
 
-This repo hosts a tiny script + workflow that builds an index of **public** gists for a username and overwrites a designated “index” gist with a Markdown table.
+[![Update Gist Index](https://github.com/RichLewis007/gist-index/actions/workflows/update-gist-index.yml/badge.svg)](https://github.com/RichLewis007/gist-index/actions/workflows/update-gist-index.yml)
 
-See the resulting Gist here: https://gist.github.com/RichLewis007/a48c0ac6b651a36724ce6314d5242c74
+This repo hosts the script and workflow that:
+- Builds a Markdown index of my **public gists**
+- Updates a designated gist: https://gist.github.com/RichLewis007/a48c0ac6b651a36724ce6314d5242c74
+- Commits a copy into the `Public-Gists-from-Rich-Lewis` repo daily
 
 It uses a GitHub Action which runs the Python script on a schedule or manually.
 
