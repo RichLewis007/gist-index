@@ -39,6 +39,6 @@ jobs:
         run: |
           uv --version
           # If you added pyproject.toml with requests, plain `uv run` is enough:
-          # uv run python gist_index.py
+          # uv run python gist-index.py
           # Otherwise, pull requests on the fly:
-          uv run --with requests python gist_index.py
+          uv run --with requests python gist-index.py

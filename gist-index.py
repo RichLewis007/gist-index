@@ -35,7 +35,12 @@ Env:
   export INDEX_GIST_ID="YOUR_GIST_ID"
   export GITHUB_TOKEN="YOUR_GIST_EDITING_TOKEN"
 
+  # If you added pyproject.toml with requests, plain `uv run` is enough:
+  uv run python gist-index.py
+  # Otherwise, pull requests on the fly:
   uv run --with requests python gist-index.py
+
+  You'll see: Updated gist: https://gist.github.com/RichLewis007/a48c0ac6b651a36724ce6314d5242c74
 
 ## Output
 
