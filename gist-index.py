@@ -5,6 +5,26 @@ and update a target gist with a Markdown table of those public gists.
 
 Uses a GitHub Action which runs this script on a schedule or manually.
 
+## Requirements
+Uses GitHub API command line utility, install it via:
+```
+gh auth login
+```
+
+This script is using the python tool "uv". If you aren't, you can install it via pip:
+```
+pip install uv
+```
+
+or if you don't want to use uv, install deps via:
+```
+python3 -m pip install --upgrade requests
+```
+and run via:
+```
+python3 gist-index.py
+```
+
 Env:
   GITHUB_USERNAME   (required) GitHub handle to list PUBLIC gists from
   INDEX_GIST_ID     (required) The gist ID to overwrite (the index gist)
@@ -12,10 +32,21 @@ Env:
 
   To run: 
   export GITHUB_USERNAME="RichLewis007"
-  export INDEX_GIST_ID="MY_GIST_ID"
-  export GITHUB_TOKEN="MY_GIST_EDITING_TOKEN"
+  export INDEX_GIST_ID="YOUR_GIST_ID"
+  export GITHUB_TOKEN="YOUR_GIST_EDITING_TOKEN"
 
   uv run --with requests python gist-index.py
+
+## Output
+
+Output fields:
+Title (first line of gist description, truncated)
+Files (count)
+Lang (primary language by largest file)
+Public (always ✅ here)
+Updated (UTC)
+Link (to the gist)
+
 """
 
 from __future__ import annotations
