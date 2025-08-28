@@ -13,20 +13,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1) Checkout THIS repo (gist-index)
       - name: Checkout (this repo)
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      # 2) Python + uv
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - uses: astral-sh/setup-uv@v6
+        with: { enable-cache: true }
 
-      - name: Set up uv (with cache)
-        uses: astral-sh/setup-uv@v6
-        with:
-          enable-cache: true
-
-      # 1) Run the script to STDOUT and also update the gist (env controls gist update)
+      # 3) Generate Markdown to /tmp and (optionally) update the gist
+      # Run the script to STDOUT and also update the gist (env controls gist update)
       - name: Generate Markdown and update gist
         id: gen
         env:
@@ -37,27 +35,56 @@ jobs:
         run: |
           uv run --with requests python gist-index.py > /tmp/Public-Gists-from-Rich-Lewis.md
 
-      # 2) Check out the OTHER repo where you want the Markdown committed
+      # (optional) quick sanity log
+      - name: Inspect generated Markdown
+        run: |
+          head -n 20 /tmp/Public-Gists-by-Rich-Lewis.md || true
+          wc -c /tmp/Public-Gists-by-Rich-Lewis.md || true
+
+      # 4) Checkout the TARGET repo that hosts the Pages site
       - name: Checkout target repo (Public-Gists-from-Rich-Lewis)
         uses: actions/checkout@v4
         with:
           repository: RichLewis007/Public-Gists-from-Rich-Lewis
+          fetch-depth: 0
+          ref: main
           path: target-repo
           token: ${{ secrets.PUSH_TOKEN }}
 
-      # 3) Copy the generated file into the target repo, commit, and push if it changed
-      - name: Commit updated Markdown into target repo
+      # 5) ⬅️ REPLACE your old commit step with THIS one
+      - name: Commit updated Markdown into target repo (root + docs)
         working-directory: target-repo
+        shell: bash
         run: |
-          cp /tmp/Public-Gists-from-Rich-Lewis.md ./Public-Gists-from-Rich-Lewis.md
-
+          set -euo pipefail
+          mkdir -p docs
+      
+          cp /tmp/Public-Gists-by-Rich-Lewis.md ./Public-Gists-by-Rich-Lewis.md
+          cp /tmp/Public-Gists-by-Rich-Lewis.md ./docs/index.md
+      
+          if [ ! -f docs/_config.yml ]; then
+            printf "%s\n" \
+              "title: Public Gists from Rich Lewis" \
+              "description: Daily index of public gists" \
+              "theme: jekyll-theme-cayman" \
+              "url: https://github.richlewis007.com" \
+              "baseurl: /Public-Gists-from-Rich-Lewis" \
+              > docs/_config.yml
+          fi
+      
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          if ! git diff --quiet -- Public-Gists-from-Rich-Lewis.md; then
-            git add Public-Gists-from-Rich-Lewis.md
-            git commit -m "chore: update public gist index [skip ci]"
-            git push
-          else
+          git add -A
+          if git diff --cached --quiet; then
             echo "No changes to commit."
+          else
+            git commit -m "chore: update gist list (root + docs) [skip ci]"
+            git push
           fi
+          
+      - name: Show docs/_config.yml
+        working-directory: target-repo
+        run: |
+          echo "----- docs/_config.yml -----"
+          cat docs/_config.yml || true
+          
