@@ -38,8 +38,8 @@ jobs:
       # (optional) quick sanity log
       - name: Inspect generated Markdown
         run: |
-          head -n 20 /tmp/Public-Gists-by-Rich-Lewis.md || true
-          wc -c /tmp/Public-Gists-by-Rich-Lewis.md || true
+          head -n 20 /tmp/Public-Gists-from-Rich-Lewis.md || true
+          wc -c /tmp/Public-Gists-from-Rich-Lewis.md || true
 
       # 4) Checkout the TARGET repo that hosts the Pages site
       - name: Checkout target repo (Public-Gists-from-Rich-Lewis)
@@ -59,8 +59,8 @@ jobs:
           set -euo pipefail
           mkdir -p docs
       
-          cp /tmp/Public-Gists-by-Rich-Lewis.md ./Public-Gists-by-Rich-Lewis.md
-          cp /tmp/Public-Gists-by-Rich-Lewis.md ./docs/index.md
+          cp /tmp/Public-Gists-from-Rich-Lewis.md ./Public-Gists-from-Rich-Lewis.md
+          cp /tmp/Public-Gists-from-Rich-Lewis.md ./docs/index.md
       
           if [ ! -f docs/_config.yml ]; then
             printf "%s\n" \
