@@ -1,4 +1,4 @@
-name: Update Public Gist Index
+name: Update Gist Index (Daily + Repo Push)
 
 on:
   schedule:
