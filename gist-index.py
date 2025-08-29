@@ -144,7 +144,8 @@ def list_public_gists(s: Session, username: str) -> List[Dict[str, Any]]:
     gists: List[Dict[str, Any]] = []
     page = 1
     while True:
-        r = _req_with_retry(s, "GET", f"{API}/users/{username}/gists", params={"per_page": 100, "page": page})
+        r = _req_with_retry(s, "GET", f"{API}/users/{username}/gists",
+                            params={"per_page": 100, "page": page})
         if r.status_code == 404:
             print(f"User '{username}' not found or gists unavailable.", file=sys.stderr)
             sys.exit(2)
@@ -154,7 +155,13 @@ def list_public_gists(s: Session, username: str) -> List[Dict[str, Any]]:
             break
         gists.extend(chunk)
         page += 1
-    return gists
+
+    # Hard filter (defensive): only keep gists explicitly marked public
+    public_only = [g for g in gists if bool(g.get("public", False))]
+    if len(public_only) != len(gists):
+        skipped = len(gists) - len(public_only)
+        print(f"[info] Skipped {skipped} non-public gist(s).", file=sys.stderr)
+    return public_only
 
 def primary_language(files: Dict[str, Dict[str, Any]]) -> str:
     best: Optional[Tuple[str, int]] = None
@@ -204,7 +211,8 @@ def build_markdown(gists: list[dict]) -> str:
             updated = g.get("updated_at") or ""
         url = g.get("html_url") or ""
 
-        lines.append(f"| {title} | {file_count} | {lang or ''} | ✅ | {updated} | [open]({url}) |")
+        public_flag = "✅" if g.get("public") else "❌"
+        lines.append(f"| {title} | {file_count} | {lang or ''} | {public_flag} | {updated} | [open]({url}) |")
 
     lines += [
         "",
