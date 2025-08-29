@@ -177,7 +177,6 @@ def build_markdown(gists: list[dict]) -> str:
         "",
         "**Last updated:** " + timestamp,
         "",
-        '<div class="table-wrap" markdown="1">',
         "",  # <-- critical blank line so the table is parsed as Markdown
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",
@@ -204,7 +203,6 @@ def build_markdown(gists: list[dict]) -> str:
 
     # important blank line below. That empty string inserts the required blank line so kramdown parses the table inside the HTML wrapper.
     lines += [
-        "</div>",
         "",
         (
             f"_Generated automatically by "
