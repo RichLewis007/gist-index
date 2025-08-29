@@ -177,6 +177,11 @@ def build_markdown(gists: list[dict]) -> str:
         "",
         "**Last updated:** " + timestamp,
         "",
+        count = len(gists)
+        lines += [
+            f"**Total public gists:** {count}",
+            "",
+        ]
         "",  # <-- critical blank line so the table is parsed as Markdown
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",

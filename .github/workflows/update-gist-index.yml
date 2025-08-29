@@ -58,15 +58,14 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p docs
-      
+
+          # Root copy (unchanged)
           cp /tmp/Public-Gists-from-Rich-Lewis.md ./Public-Gists-from-Rich-Lewis.md
           
-          # Site copy: prepend optional header if present
-          if [ -f docs/_header.md ]; then
-            cat docs/_header.md /tmp/Public-Gists-from-Rich-Lewis.md > docs/index.md
-          else
-            cp /tmp/Public-Gists-from-Rich-Lewis.md ./docs/index.md
-          fi
+          # Site copy: prepend header (if any), then generated content, then footer (if any)
+          HEADER=docs/_header.md
+          FOOTER=docs/_footer.md
+          cat ${HEADER:+$HEADER} /tmp/Public-Gists-from-Rich-Lewis.md ${FOOTER:+$FOOTER} > docs/index.md
 
           if [ ! -f docs/_config.yml ]; then
             printf "%s\n" \
