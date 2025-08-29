@@ -173,7 +173,7 @@ def build_markdown(gists: list[dict]) -> str:
     lines = [
         "# Public Gists from Rich Lewis",
         "",
-        f"_Auto-generated at {timestamp}_",
+        f"_Generated at {timestamp}_",
         "",
         "**Last updated:** " + timestamp,
         "",
@@ -218,7 +218,7 @@ def build_markdown(gists: list[dict]) -> str:
 
 def update_index_gist(s: Session, gist_id: str, target_md: str, content_md: str) -> str:
     payload = {
-        "description": "Auto-generated index of my PUBLIC gists",
+        "description": "Public gists from Rich Lewis",
         "files": { target_md: {"content": content_md} },
     }
     r = _req_with_retry(s, "PATCH", f"{API}/gists/{gist_id}", json=payload)
