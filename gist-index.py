@@ -177,12 +177,13 @@ def build_markdown(gists: list[dict]) -> str:
         "",
         "**Last updated:** " + timestamp,
         "",
-        count = len(gists)
-        lines += [
-            f"**Total public gists:** {count}",
-            "",
-        ]
-        "",  # <-- critical blank line so the table is parsed as Markdown
+    ]
+
+    # ✅ Do assignment as a standalone statement (not inside the list literal)
+    count = len(gists)
+    lines += [
+        f"**Total public gists:** {count}",
+        "",
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",
     ]
@@ -203,10 +204,8 @@ def build_markdown(gists: list[dict]) -> str:
             updated = g.get("updated_at") or ""
         url = g.get("html_url") or ""
 
-        # Present language as a simple string (CSS can style table cells)
         lines.append(f"| {title} | {file_count} | {lang or ''} | ✅ | {updated} | [open]({url}) |")
 
-    # important blank line below. That empty string inserts the required blank line so kramdown parses the table inside the HTML wrapper.
     lines += [
         "",
         (
