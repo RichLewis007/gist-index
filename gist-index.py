@@ -171,7 +171,7 @@ def build_markdown(gists: list[dict]) -> str:
     timestamp = now_et.strftime("%Y-%m-%d %I:%M %p %Z")
 
     lines = [
-        "# Public Gists by Rich Lewis",
+        "# Public Gists from Rich Lewis",
         "",
         f"_Auto-generated at {timestamp}_",
         "",

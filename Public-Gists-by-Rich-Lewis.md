@@ -1,4 +1,4 @@
-# Public Gists by Rich Lewis
+# Public Gists from Rich Lewis
 
 _Auto-generated daily at 2025-08-28 04:52 UTC_
 
@@ -13,7 +13,7 @@ _Auto-generated daily at 2025-08-28 04:52 UTC_
 | 🔄 Custom React Hook – useFetch | 1 | Markdown | ✅ | 2025-08-02 07:14:29 UTC | [open](https://gist.github.com/RichLewis007/5a8690880627e4b66fe231ba5691fe18) |
 | 🧠 TensorFlow ConvNet | 1 | Markdown | ✅ | 2025-08-02 07:14:29 UTC | [open](https://gist.github.com/RichLewis007/39c9c5bcf59037c030a84501212a0733) |
 
-# Public Gists by Rich Lewis
+# Public Gists from Rich Lewis
 
 _Auto-generated daily at 2025-08-28 04:53 UTC_
 
