@@ -60,8 +60,14 @@ jobs:
           mkdir -p docs
       
           cp /tmp/Public-Gists-from-Rich-Lewis.md ./Public-Gists-from-Rich-Lewis.md
-          cp /tmp/Public-Gists-from-Rich-Lewis.md ./docs/index.md
-      
+          
+          # Site copy: prepend optional header if present
+          if [ -f docs/_header.md ]; then
+            cat docs/_header.md /tmp/Public-Gists-from-Rich-Lewis.md > docs/index.md
+          else
+            cp /tmp/Public-Gists-from-Rich-Lewis.md ./docs/index.md
+          fi
+
           if [ ! -f docs/_config.yml ]; then
             printf "%s\n" \
               "title: Public Gists from Rich Lewis" \
