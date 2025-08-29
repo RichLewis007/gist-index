@@ -200,7 +200,7 @@ small.muted{ color:var(--muted); }
         '  <input id="filter" type="search" placeholder="Filter by title or language…">',
         '  <span class="badge" id="count"></span>',
         '</div>',
-        '<div class="table-wrap">',
+        '<div class="table-wrap" markdown="1">',
         "| Title | Files | Lang | Public | Updated | Link |",
         "|---|---:|---|:---:|---|---|",
     ]
